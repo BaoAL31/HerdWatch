@@ -2,58 +2,266 @@
 {% block extra_css %}
     <style>
       body{
-        padding-top: 100px;
+        padding: 0;
+        padding-top: 50px;
       }
+      .container {
+            position: relative;
+            padding: 0;
+            margin: 0;
+        }
+      .title-text {
+        font-weight: bold;
+<!--        position: absolute;-->
+<!--        top: 50%;-->
+<!--        left: 50%;-->
+      }
+
+      .banner {
+        position: relative;
+        height: 100px;
+        width: 100%;
+        top: -50px;
+      }
+
+      .banner-img {
+         width: 100%;
+        height: 300px;
+        object-fit: cover;
+        opacity: 0.2;
+      }
+
+      .relative-container {
+        display: relative;
+        padding-right: 0px;
+        width: 141%;
+        height: 250px;
+      }
+
+
+      .abs-container {
+            color: black;
+            position: absolute;
+            left: 20%;
+            top: 50px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .padded-container {
+            position: relative;
+            left: 2%;
+            right: 2%;
+            width: 135%;
+            height: auto;
+            padding: 80px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .section-title {
+        text-decoration: underline;
+        }
+
+        .blue-border {
+            border: 1px solid rgba(113, 206, 240, 0.6);
+        }
+
+        .blue-bg {
+            background-color: rgba(113, 206, 240, 0.6);
+        }
+
+        .card-big {
+            position: relative;
+            left: 22%;
+            padding: 10px;
+            width: 56%;
+            border: 1px solid rgba(113, 206, 240, 0.6);
+            border-radius: 5px;
+            text-align: center;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.5);
+        }
+
+      .card-container {
+        padding-left: 150px;
+        padding-right: 150px;
+        padding-top: 50px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+        .card {
+            padding: 0px;
+            width: 35%;
+            border: 1px solid rgba(113, 206, 240, 0.6);
+            text-align: center;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-header {
+            width: 100%;
+            background-color: rgba(113, 206, 240, 0.6);
+        }
+
+        .card-img-container {
+            width: 100%;
+            height: 150px;
+            font-size: 100px;
+        }
+
+        .card-text {
+            padding: 20px;
+            padding-top: 0;
+        }
+
+        .card .btn {
+        margin: 0 auto;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        width: 50%;
+        }
+
+        .tab-content {
+        padding: 20px;
+        padding-top: 0px;
+        padding-bottom: 0px;
+        position: relative;
+        width: 50%;
+        height: 450px;
+        left: 25%;
+        border: 1px solid rgba(113, 206, 240, 0.6);
+        }
+
+        .carousel-item {
+        height: 400px;
+        }
+
     </style>
 {% endblock %}
 {% load wagtailcore_tags wagtailimages_tags %}
+
+
 <div class="container">
+
 {% block content %}
-
-  {% image self.banner_image width-1500 as img %}
-
-  <center><h1 class="display-4">{{ self.banner_title }}</h1></center>
-  <center><div class="lead">
-    <h4>{{ self.banner_subtitle|richtext }}</h4>
+    {% image self.banner_image width-2000 as img %}
+  <div class="relative-container blue-bg">
+      <div class="banner">
+        <img src="{{ img.url }}" class="d-block banner-img" alt="{{ img.alt }}">
+      </div>
+      <div class="abs-container">
+        <h1 class="display-4 title-text">{{ self.banner_title }}</h1>
+        <h4>{{ self.banner_subtitle|richtext }}</h4>
+      </div>
+  </div>
     <br>
-    <img src="{{ img.url }}" class="d-block w-100" alt="{{ img.alt }}">
-    <br><br><br>
-    <h3>What we Do?</h3>
-  </div></center>
 
-  <br>
-  {# Example of an Orderable from home/models.py #}
-  <div class="container-fluid">
-    <div id="carouselExampleControls" class="carousel slide" data-ride="carousel">
-        <div class="carousel-inner">
-            {% for loop_cycle in self.carousel_images.all %}
-                {% image loop_cycle.carousel_image height-600 as img %}
-                <div class="carousel-item{% if forloop.counter == 1 %} active{% endif %}">
-                    <img src="{{ img.url }}" class="d-block w-100" alt="{{ img.alt }}">
-                </div>
-            {% endfor %}
+    <div class="padded-container blue-border">
+        <h3 class="section-title">What We Do?</h3>
+        <br>
+        <div class="card-big blue-bg">
+            <h5>
+                By using computer vision technology, particularly YOLOv8,
+                we are able to detect cattle within our system. Beyond just identification,
+                our solution also classify cattle behaviors, providing valuable insights into the
+                actions and interactions of the detected cattle.
+            </h5>
         </div>
-        <a class="carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="sr-only">Previous</span>
-        </a>
-        <a class="carousel-control-next" href="#carouselExampleControls" role="button" data-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="sr-only">Next</span>
-        </a>
+        <br>
+        <div class="tab-content card-big" id="myTabContent" style=" ">
+            <div class="tab-pane fade show active grey-container" id="home" role="tabpanel" aria-labelledby="image-tab">
+            <br>
+            <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
+    <!--          <ol class="carousel-indicators">-->
+    <!--            {% for my_file in my_uploaded_file_names %}-->
+    <!--                  <li data-target="#carouselExampleIndicators" data-slide-to={{forloop.counter0}} class="{% if forloop.first %} active {% endif %}" aria-current="true" aria-label={{forloop.counter}}></li>-->
+    <!--            {% endfor %}-->
+    <!--          </ol>-->
+              <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <a href="media\images\Folder.height-100.jpg" target="_blank"><img src="media\images\example_detections\img1.png" class="d-block w-100"></a>
+                    <!-- <img src="{{my_file1}}" class="d-block w-100"> -->
+                    </div>
+                    <div class="carousel-item">
+                        <a href="media\images\Folder.height-100.jpg" target="_blank"><img src="media\images\example_detections\img2.png" class="d-block w-100"></a>
+                    <!-- <img src="{{my_file1}}" class="d-block w-100"> -->
+                    </div>
+                    <div class="carousel-item">
+                        <a href="media\images\Folder.height-100.jpg" target="_blank"><img src="media\images\example_detections\img3.png" class="d-block w-100"></a>
+                    <!-- <img src="{{my_file1}}" class="d-block w-100"> -->
+                    </div>
+              </div>
+              <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="sr-only">Previous</span>
+              </a>
+              <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="sr-only">Next</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <br>
+        <div class="card-big blue-bg">
+            <h5>
+                Our system uses two methods to perform cattle detection and behaviour classification:
+            </h5>
+        </div>
+
+            <div class="card-container">
+                <div class="card border">
+                    <div class="card-header"> <h4>Media Detection</h4> </div>
+                    <div class="bi-folder card-img-container"> </div>
+                    <h5 class="card-text"> Using images and videos you upload, we can perform cattle detection and behaviour analysis on those medias. </h5>
+                    <a class="btn btn-primary btn-lg" href="/imagepage"> Try it out! </a>
+
+                </div>
+
+                <div class="card border">
+                    <div class="card-header"> <h4>Live Detection</h4> </div>
+                    <div class="bi-camera card-img-container"> </div>
+                    <h5 class="card-text"> Utilizing your webcam, we can perform real-time cattle detection using the live footage captured by your camera. </h5>
+                    <a class="btn btn-primary btn-lg" href="/video"> Try it out! </a>
+                </div>
+            </div>
     </div>
-  </div>
-<br><br>
-  <div class="container">
-    <center><h4 class=" ">Random cards to display some information like features or something</h4></center>
-    <br>
-    {% for block in page.contentCard %}
 
-      {% include_block block %}
 
-    {% endfor %}
-  </div>
+<!--  </div></center>-->
 
+<!--  <br>-->
+<!--  {# Example of an Orderable from home/models.py #}-->
+<!--  <div class="container-fluid">-->
+<!--    <div id="carouselExampleControls" class="carousel slide" data-ride="carousel">-->
+<!--        <div class="carousel-inner">-->
+<!--            {% for loop_cycle in self.carousel_images.all %}-->
+<!--                {% image loop_cycle.carousel_image height-600 as img %}-->
+<!--                <div class="carousel-item{% if forloop.counter == 1 %} active{% endif %}">-->
+<!--                    <img src="{{ img.url }}" class="d-block w-100" alt="{{ img.alt }}">-->
+<!--                </div>-->
+<!--            {% endfor %}-->
+<!--        </div>-->
+<!--        <a class="carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">-->
+<!--            <span class="carousel-control-prev-icon" aria-hidden="true"></span>-->
+<!--            <span class="sr-only">Previous</span>-->
+<!--        </a>-->
+<!--        <a class="carousel-control-next" href="#carouselExampleControls" role="button" data-slide="next">-->
+<!--            <span class="carousel-control-next-icon" aria-hidden="true"></span>-->
+<!--            <span class="sr-only">Next</span>-->
+<!--        </a>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--<br><br>-->
+<!--  <div class="container">-->
+<!--    <center><h4 class=" ">Random cards to display some information like features or something</h4></center>-->
+<!--    <br>-->
+<!--    <div class="flex-container">-->
+<!--        {% for block in page.contentCard %}-->
+
+<!--          {% include_block block %}-->
+
+<!--        {% endfor %}-->
+<!--    </div>-->
 
 
 {% endblock %}

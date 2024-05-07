@@ -9,6 +9,8 @@ import datetime
 import numpy as np
 import os, json, cv2, random, glob, uuid
 import matplotlib.pyplot as plt
+from ultralytics import YOLO
+from ultralytics.utils.plotting import Annotator  # ultralytics.yolo.utils.plotting is deprecated
 
 from pathlib import Path
 import time
@@ -32,25 +34,39 @@ class VideoCamera(object):
         # so we must encode it into JPEG in order to correctly display the
         # video stream.
         outputs = image
-        # if you dont want to show the detection, comment the below code till outputImage = image, and change it to outputImage = outputs
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        eyes_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        gray = cv2.equalizeHist(gray)
-        #-- Detect faces
-        faces = face_cascade.detectMultiScale(gray)
-        for (x,y,w,h) in faces:
-            center = (x + w//2, y + h//2)
-            image = cv2.ellipse(image, center, (w//2, h//2), 0, 0, 360, (255, 0, 255), 4)
-            faceROI = gray[y:y+h,x:x+w]
-            #-- In each face, detect eyes
-            eyes = eyes_cascade.detectMultiScale(faceROI)
-            for (x2,y2,w2,h2) in eyes:
-                eye_center = (x + x2 + w2//2, y + y2 + h2//2)
-                radius = int(round((w2 + h2)*0.25))
-                image = cv2.circle(image, eye_center, radius, (255, 0, 0 ), 4)
-        outputImage = image
-        ret, outputImagetoReturn = cv2.imencode('.jpg', outputImage) # check if it work
+        # # if you dont want to show the detection, comment the below code till outputImage = image, and change it to outputImage = outputs
+        # face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        # eyes_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+        # gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        # gray = cv2.equalizeHist(gray)
+        # #-- Detect faces
+        # faces = face_cascade.detectMultiScale(gray)
+        # for (x,y,w,h) in faces:
+        #     center = (x + w//2, y + h//2)
+        #     image = cv2.ellipse(image, center, (w//2, h//2), 0, 0, 360, (255, 0, 255), 4)
+        #     faceROI = gray[y:y+h,x:x+w]
+        #     #-- In each face, detect eyes
+        #     eyes = eyes_cascade.detectMultiScale(faceROI)
+        #     for (x2,y2,w2,h2) in eyes:
+        #         eye_center = (x + x2 + w2//2, y + y2 + h2//2)
+        #         radius = int(round((w2 + h2)*0.25))
+        #         image = cv2.circle(image, eye_center, radius, (255, 0, 0 ), 4)
+
+        weights_dir = settings.YOLOV8_WEIGTHS_DIR
+        yolov8m_model = YOLO(os.path.join(weights_dir, "data2.pt"))
+        outputImage = yolov8m_model(image, save=False)
+        annotator = Annotator(outputs)
+        for r in outputImage:
+
+            boxes = r.boxes
+            for box in boxes:
+                b = box.xyxy[0]  # get box coordinates in (left, top, right, bottom) format
+                c = box.cls
+                annotator.box_label(b, yolov8m_model.names[int(c)])
+
+        outputImagetoReturn = np.asarray(annotator.result())
+        print(outputImagetoReturn)
+        ret, outputImagetoReturn = cv2.imencode('.jpg', outputImagetoReturn) # check if it work
         return outputImagetoReturn.tobytes(), outputImage
 
 def generate_frames(camera):

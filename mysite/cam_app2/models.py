@@ -51,9 +51,18 @@ def reset():
             file.truncate(0)
             file.close()
 
+    result_dir = str(Path(f'{settings.MEDIA_ROOT}/Result/'))
+    for item in os.listdir(result_dir):
+        item_path = os.path.join(result_dir, item)
+        # Check if the item is a directory
+        if os.path.isdir(item_path):
+            # Remove the directory and its contents recursively
+            shutil.rmtree(item_path)
+
+
 # Create your models here.
-class ImagePage(Page):
-    """Image Page."""
+class MediaPage(Page):
+    """Media Page."""
 
     template = "cam_app2/image.html"
 
@@ -83,16 +92,17 @@ class ImagePage(Page):
         return context
 
     def serve(self, request):
+        print(request.POST.keys())
         emptyButtonFlag = False
         context = self.reset_context(request)
-        if request.POST.get('start') == "":
+
+        if 'start' in request.POST:
             print("Start selected")
             weights_dir = settings.YOLOV8_WEIGTHS_DIR
-            yolov8m_model = YOLO(os.path.join(weights_dir, "best.pt"))
+            yolov8m_model = YOLO(os.path.join(weights_dir, "data2.pt"))
             uploaded_dir = os.path.join(default_storage.location, "uploadedPics")
             uploaded_files_txt = os.path.join(uploaded_dir, "img_list.txt")
             results_dir = os.path.join(default_storage.location, "Result")
-
             if os.path.getsize(uploaded_files_txt) != 0:
                 results = yolov8m_model.predict(source=uploaded_dir, save=True, project=results_dir)
                 # print(f'Results len: {len(results)}')
@@ -102,19 +112,19 @@ class ImagePage(Page):
                         # print(file_name)
                         context["my_uploaded_file_names"].append(str(f'{str(file_name)}'))
                         context = self.add_results_to_context(results_dir, context)
-
-
-
             # with default_storage.open(Path("uploadedPics")) as uploaded_files:
             # uploaded_files = default_storage.listdir('')[1]
             # for file in uploaded_files:
             #     print(file)
+            return render(request, "cam_app2/image.html", context)
 
+        elif 'restart' in request.POST:
+            reset()
+            context = self.reset_context(request)
             return render(request, "cam_app2/image.html", context)
 
         if (request.FILES and emptyButtonFlag == False):
             print("reached here files")
-            reset()
             context["my_uploaded_file_names"] = []
             for file_obj in request.FILES.getlist("file_data"):
                 uuidStr = uuid.uuid4()

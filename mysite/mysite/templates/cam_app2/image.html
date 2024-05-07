@@ -17,22 +17,41 @@
 <center>
     <div class="container-fluid " style="height:100%; padding-top:3%; display: block; overflow: auto;">
         <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
+
+        <script type="text/javascript">
+            window.addEventListener('beforeunload', function (e) {
+                console.log("Hey");
+                $.ajax({
+                  type: "POST",
+                  url: "~/pythoncode.py",
+                  data: { param: text}
+                }).done(function( o ) {
+                   // do something
+                });
+            });
+        </script>
+
         <style>
             .center-container {
                 display: flex;
                 align-items: center;
                 justify-content: center;
             }
+            .grey-container {
+              border: 2px solid grey;
+              border-radius: 10px;
+              background: rgba(206, 206, 206, 0.16);
+              min-height: 360px;
+            }
           .file-drop-area {
               align-items: center;
               max-width: 100%;
               max_height: 80%;
               padding: 25px;
-              border: 1px dashed rgba(255, 255, 255, 0.4);
               border-radius: 3px;
               transition: .2s;
               min-height: 400px;
-              overflow: auto;
+              overflow: hidden;
             }
 
           .choose-file-button {
@@ -44,6 +63,10 @@
               margin-right: 10px;
               font-size: 12px;
               text-transform: uppercase
+            }
+
+            .inline{
+                display: inline-block;
             }
 
            .circle-button {
@@ -103,6 +126,14 @@
               cursor: pointer;
               opacity: 0
             }
+
+           .carousel {
+            left: 25%;
+            width: 50%;
+           }
+           .carousel-inner {
+                width: 640px;
+            }
         </style>
         <script type="text/javascript">
           $(document).on('change', '.file-input', function() {
@@ -138,21 +169,23 @@
         </script>
 
         <form class="input-group mb-3" method="POST" enctype="multipart/form-data" id="form1">
-              <div class="file-drop-area border container-fluid">
+              <div class="file-drop-area container-fluid grey-container">
                   <span class="circle-button centered-span">
                       <i class="bi-upload"> </i>
                   </span>
                   <br>
                  <span class="file-message">
                      <span class="emphasized-text">Upload</span> or <span class="emphasized-text">Drag and Drop</span> files.
+                     <br>
+                     <i style="font-size: 16px;">  Accepted file formats: .jfif,.jpg,.jpeg,.png,.gif,.mp4, .mov </i>
                  </span>
                   <br>
                   <span class="num-selected-files"></span>
-                  <input type="file" name="file_data" class="file-input" accept=".jfif,.jpg,.jpeg,.png,.gif,.mp4" multiple>
+                  <input type="file" name="file_data" class="file-input" accept=".jfif,.jpg,.jpeg,.png,.gif,.mp4, .mov" multiple>
               </div>
               {% csrf_token %}
               <div class="container-fluid p-2">
-                    <button class="btn btn-primary" type="submit" id="inputGroupFileAddon04">Upload</button>
+                    <button class="btn btn-primary btn-lg" type="submit" id="inputGroupFileAddon04">Upload</button>
               </div>
         </form>
         <h6>List of selected/uploaded files <span style="font-style: italic">(click to open in new tab)</span>: </h6>
@@ -163,41 +196,45 @@
         {% endfor %}
 
         </ul>
+          <form method="POST" id="restart" >
+            {% csrf_token %}
+              <button class="btn btn-primary btn-lg " style="margin-top: 50px;" type="submit" name="restart">Restart</button>
+          </form>
     <br><br><br>
 
     </div>
 </center>
 
-<div class=" ">
+<div class="container-fluid">
   <form method="POST" id="start">
     {% csrf_token %}
-    <button class="btn btn-primary" type="submit" name="start" id="start">Start</button>
+    <button class="btn btn-primary inline btn-lg" type="submit" name="start" >Start</button>
   </form>
 </div>
 
 <div class=" " style="margin-bottom:400px;">
     <ul class="nav nav-tabs" id="myTab">
       <li class="nav-item">
-        <a class="nav-link active" id="image-tab" data-toggle="tab" data-target="#home"  aria-controls="home">Raw Images</a>
+        <a class="nav-link active" id="image-tab" data-toggle="tab" data-target="#home"  aria-controls="home">Raw</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" id="result-tab" data-toggle="tab" data-target="#profile1" aria-controls="profile1">Result Images</a>
+        <a class="nav-link" id="result-tab" data-toggle="tab" data-target="#profile1" aria-controls="profile1">Result</a>
       </li>
     </ul>
 
     <div class="tab-content" id="myTabContent" style=" ">
-      <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="image-tab">
+      <div class="tab-pane fade show active grey-container" id="home" role="tabpanel" aria-labelledby="image-tab">
         <br>
-        <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
-          <ol class="carousel-indicators">
-            {% for my_file in my_uploaded_file_names %}
-                  <li data-target="#carouselExampleIndicators" data-slide-to={{forloop.counter0}} class="{% if forloop.first %} active {% endif %}" aria-current="true" aria-label={{forloop.counter}}></li>
-            {% endfor %}
-          </ol>
+        <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel" data-interval="false">
+<!--          <ol class="carousel-indicators">-->
+<!--            {% for my_file in my_uploaded_file_names %}-->
+<!--                  <li data-target="#carouselExampleIndicators" data-slide-to={{forloop.counter0}} class="{% if forloop.first %} active {% endif %}" aria-current="true" aria-label={{forloop.counter}}></li>-->
+<!--            {% endfor %}-->
+<!--          </ol>-->
           <div class="carousel-inner">
             {% for my_file1 in my_uploaded_file_names %}
                 <div class="carousel-item {% if forloop.first %} active {% endif %} ">
-                    {% if my_file1|lower|slice:'-4:' == '.mp4' %}
+                    {% if my_file1|lower|slice:'-4:' in '.mp4,.mov' %}
                         <video controls class="d-block w-100">
                             <source src="{{ my_file1 }}" type="video/mp4">
                             Your browser does not support the video tag.
@@ -220,9 +257,9 @@
         </div>
       </div>
 
-      <div class="tab-pane fade" id="profile1" role="tabpanel" aria-labelledby="result-tab">
+      <div class="tab-pane fade grey-container" id="profile1" role="tabpanel" aria-labelledby="result-tab">
         <!-- This is result images. -->
-        <div id="carouselExampleIndicators2" class="carousel slide" data-ride="carousel">
+        <div id="carouselExampleIndicators2" class="carousel slide" data-ride="carousel" data-interval="false">
           <ol class="carousel-indicators">
             {% for my_file2 in my_result_file_names %}
                   <li data-target="#carouselExampleIndicators2" data-slide-to={{forloop.counter0}} class="{% if forloop.first %} active {% endif %}" aria-current="true" aria-label={{forloop.counter}}></li>

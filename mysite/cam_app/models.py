@@ -20,7 +20,7 @@ from streams import blocks
 import sqlite3, datetime, os
 
 # Create your models here.
-class VideoPage(Page):
+class LivePage(Page):
     """Video Page."""
 
     template = "cam_app/video2.html"
@@ -40,8 +40,12 @@ class VideoPage(Page):
             heading="Page Options",
         ),
     ]
-    
+
 
 
     def serve(self, request):
         return  render(request, "cam_app/video2.html", {'page': self})
+
+    class Meta:
+        verbose_name = "Live Page"
+        verbose_name_plural = "Live Pages"

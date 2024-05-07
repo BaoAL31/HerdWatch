@@ -42,7 +42,7 @@ class HomePage(Page):
     banner_image = models.ForeignKey(
         "wagtailimages.Image",
         null=True,
-        blank=False,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="+",
     )
@@ -79,6 +79,5 @@ class HomePage(Page):
     ]
 
     class Meta:
-
         verbose_name = "Home Page"
         verbose_name_plural = "Home Pages"

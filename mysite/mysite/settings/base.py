@@ -23,7 +23,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 # Application definition
-
 INSTALLED_APPS = INSTALLED_APPS = [
     'home',
     'flex',
