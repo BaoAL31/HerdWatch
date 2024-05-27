@@ -25,7 +25,7 @@ l18n==2021.3
 matplotlib==3.5.1
 numpy
 oauthlib==3.2.0
-opencv-python==4.5.5.64
+opencv-python
 openpyxl==3.0.9
 packaging
 Pillow

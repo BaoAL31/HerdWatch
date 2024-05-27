@@ -7,6 +7,7 @@
       }
     </style>
 {% endblock %}
+
 {% block content %}
 {% load static wagtailcore_tags wagtailimages_tags %}
 <center><h1 class="display-4">{{ page.name_title }}</h1></center>
@@ -32,6 +33,7 @@
         </script>
 
         <style>
+
             .center-container {
                 display: flex;
                 align-items: center;
@@ -41,7 +43,7 @@
               border: 2px solid grey;
               border-radius: 10px;
               background: rgba(206, 206, 206, 0.16);
-              min-height: 360px;
+              min-height: 100px;
             }
           .file-drop-area {
               align-items: center;
@@ -131,9 +133,9 @@
             left: 25%;
             width: 50%;
            }
-           .carousel-inner {
-                width: 640px;
-            }
+
+
+
         </style>
         <script type="text/javascript">
           $(document).on('change', '.file-input', function() {
@@ -260,11 +262,11 @@
       <div class="tab-pane fade grey-container" id="profile1" role="tabpanel" aria-labelledby="result-tab">
         <!-- This is result images. -->
         <div id="carouselExampleIndicators2" class="carousel slide" data-ride="carousel" data-interval="false">
-          <ol class="carousel-indicators">
-            {% for my_file2 in my_result_file_names %}
-                  <li data-target="#carouselExampleIndicators2" data-slide-to={{forloop.counter0}} class="{% if forloop.first %} active {% endif %}" aria-current="true" aria-label={{forloop.counter}}></li>
-            {% endfor %}
-          </ol>
+<!--          <ol class="carousel-indicators">-->
+<!--            {% for my_file2 in my_result_file_names %}-->
+<!--                  <li data-target="#carouselExampleIndicators2" data-slide-to={{forloop.counter0}} class="{% if forloop.first %} active {% endif %}" aria-current="true" aria-label={{forloop.counter}}></li>-->
+<!--            {% endfor %}-->
+<!--          </ol>-->
           <div class="carousel-inner">
             {% for my_file3 in my_result_file_names %}
                 <div class="carousel-item {% if forloop.first %} active {% endif %} ">
