@@ -15,6 +15,9 @@ from ultralytics.utils.plotting import Annotator
 from pathlib import Path
 import time
 
+weights_dir = settings.YOLOV8_WEIGTHS_DIR
+yolov8m_model = YOLO(os.path.join(weights_dir, "final_model.pt"))
+
 class VideoCamera(object):
     def __init__(self):
         # Using OpenCV to capture from device 0. If you have trouble capturing
@@ -41,10 +44,7 @@ class VideoCamera(object):
         # video stream.
         outputs = image
         h, w, channels = outputs.shape
-
-        weights_dir = settings.YOLOV8_WEIGTHS_DIR
-        yolov8m_model = YOLO(os.path.join(weights_dir, "final_model.pt"))
-        outputImage = yolov8m_model(image, save=False)
+        outputImage = yolov8m_model(image, save=False, conf=0.15, iou=0.6)
         annotator = Annotator(outputs)
         for r in outputImage:
             boxes = r.boxes
@@ -77,13 +77,17 @@ class VideoCamera(object):
 
 def generate_frames(camera):
     try:
+        start_time = time.time()
+        frame_count = 0
         while True:
             frame, img = camera.get_frame_with_detection()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+            frame_count += 1
+            delta_time = time.time() - start_time
+            # print(f'fps: {(frame_count / delta_time):.2f}')
     except Exception as e:
         print(e)
-
     finally:
         print("Reached finally, detection stopped")
         cv2.destroyAllWindows()
