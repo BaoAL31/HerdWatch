@@ -31,9 +31,14 @@ import os
 
 import sqlite3, datetime, os, uuid, glob
 from ultralytics import YOLO
-from ultralytics.solutions import object_counter
-
+import torch
 str_uuid = uuid.uuid4()  # The UUID for image uploading
+
+weights_dir = settings.YOLOV8_WEIGTHS_DIR
+yolov8m_model = YOLO(os.path.join(weights_dir, "final_model.pt"))
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+yolov8m_model.to(device)
 
 def reset():
     files_result = glob.glob(str(Path(f'{settings.MEDIA_ROOT}/Result/*.*')), recursive=True)
@@ -89,16 +94,6 @@ class MediaPage(Page):
         ),
     ]
 
-    color_palete = [
-        (255, 165, 0),
-        (255, 255, 0),
-        (255, 0, 0),
-        (255, 0, 255),
-        (0, 0, 255),
-        (0, 255, 255),
-        (0, 255, 0),
-    ]
-
     def reset_context(self, request):
         context = super().get_context(request)
         context["my_uploaded_file_names"] = []
@@ -114,7 +109,6 @@ class MediaPage(Page):
         try:
             if 'start' in request.POST:
                 print("Start selected")
-                weights_dir = settings.YOLOV8_WEIGTHS_DIR
                 uploaded_dir = os.path.join(default_storage.location, "uploadedPics")
                 uploaded_files_txt = os.path.join(uploaded_dir, "img_list.txt")
                 results_dir = os.path.join(default_storage.location, "Result")
@@ -122,155 +116,47 @@ class MediaPage(Page):
                     with open(uploaded_files_txt, 'r') as files_txt:
                         file_names = files_txt.read().split('\n')[:-1]
                         for file_name in file_names:
-                            line_thickness = 2
-
                             context["my_uploaded_file_names"].append(str(f'{str(file_name)}'))
                             file_name = file_name.split('\\')[-1]
                             file_path = os.path.join(uploaded_dir, file_name)
                             ext = file_name.split('.')[-1]
-                            print(file_path)
+                            # print(file_path)
                             if ext not in ['mp4', 'mov']:
                                 og_img = cv2.imread(file_path)
-                                h, w, channels = og_img.shape
-                                scale = 0.03
-                                font_scale = w / (25 / scale)
-                                print(f'Height: {h}, Width: {w}')
-                                yolov8m_model = YOLO(os.path.join(weights_dir, "final_model.pt"))
-                                yolov8m_model.to('cuda')
-                                results = yolov8m_model(file_path, save=False, conf=0.1)
-                                annotator = Annotator(og_img)
-                                for r in results:
-                                    boxes = r.boxes
-                                    count = len(boxes.cls.cpu().tolist())
-                                    print("Counter:", count)
-                                    for box in boxes:
-                                        b = box.xyxy[0]
-                                        c = box.cls
-                                        annotator.box_label(b, yolov8m_model.names[int(c)],
-                                                            color=self.color_palete[int(c)],
-                                                            txt_color=(0, 0, 0))
-
-                                    text_size, _ = cv2.getTextSize(
-                                        "Counter: " + str(count), cv2.FONT_HERSHEY_SIMPLEX, fontScale=font_scale, thickness=line_thickness
-                                    )
-                                    text_x = w // 2 - text_size[0] // 2
-                                    text_y = text_size[1]
-                                    cv2.rectangle(
-                                        og_img,
-                                        (text_x, text_y - text_size[1]),
-                                        (text_x + text_size[0], text_y),
-                                        (37, 255, 225),
-                                        -1,
-                                    )
-                                    cv2.putText(
-                                        og_img, "Counter: " + str(count), (text_x, text_y),
-                                        cv2.FONT_HERSHEY_SIMPLEX, font_scale,
-                                        (0, 0, 0), line_thickness
-                                    )
-
+                                results = yolov8m_model(file_path, conf=0.15, iou=0.6)
+                                annotated_img = annotate_img(og_img, results, scale=0.025, text_weight=2)
                                 result_name = file_name.split('.')[-2] + ".jpg"
-                                annotator.save(filename=os.path.join(results_dir, file_name.split('.')[-2] + ".jpg"))
+                                cv2.imwrite(os.path.join(results_dir, file_name.split('.')[-2] + ".jpg"), annotated_img)
                                 result_path = Path(f"{settings.MEDIA_URL}Result/{result_name}")
                             else:
-                                vid_frame_count = 0
-                                yolov8m_model = YOLO(os.path.join(weights_dir, "final_model.pt"))
-                                yolov8m_model.to('cuda')
-                                names = yolov8m_model.names
                                 cap = cv2.VideoCapture(file_path)
                                 assert cap.isOpened(), "Error reading video file"
                                 w, h, fps = (int(cap.get(x)) for x in
                                              (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT, cv2.CAP_PROP_FPS))
-                                scale = 0.03
-                                font_scale = w / (25 / scale)
+
                                 video_name = file_name[:-4] + ".avi"
                                 video_path = os.path.join(results_dir, video_name)
                                 video_writer = cv2.VideoWriter(video_path,
-                                                               cv2.VideoWriter_fourcc('F', 'M', 'P', '4'), fps, (w, h))
-                                counting_regions = [
-                                    {
-                                        "name": "YOLOv8 Rectangle Region",
-                                        "polygon": Polygon([(0, 0), (0, h), (w, h), (w, 0)]),
-                                        # Polygon points
-                                        "counts": 0,
-                                        "dragging": False,
-                                        "region_color": (37, 255, 225),  # BGR Value
-                                        "text_color": (0, 0, 0),  # Region Text Color
-                                    },
-                                ]
+                                                               cv2.VideoWriter_fourcc('M','J','P','G'), fps, (w, h))
 
                                 while cap.isOpened():
                                     success, frame = cap.read()
                                     if not success:
                                         break
-                                    vid_frame_count += 1
+                                    results = yolov8m_model(frame, conf=0.15, iou=0.6)
+                                    annotated_frame = annotate_img(frame, results, 0.025, 2)
+                                    video_writer.write(annotated_frame)
 
-                                    # Extract the results
-                                    results = yolov8m_model.track(frame, persist=True, conf=0.1)
-
-                                    if results[0].boxes.id is not None:
-                                        boxes = results[0].boxes.xyxy.cpu()
-                                        track_ids = results[0].boxes.id.int().cpu().tolist()
-                                        clss = results[0].boxes.cls.cpu().tolist()
-
-                                        annotator = Annotator(frame)
-
-                                        for box, track_id, cls in zip(boxes, track_ids, clss):
-                                            annotator.box_label(box, str(names[cls]),
-                                                                color=self.color_palete[int(cls)],
-                                                                txt_color=(0, 0, 0))
-
-                                            bbox_center = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2  # Bbox center
-
-                                            # Check if detection inside region
-                                            for region in counting_regions:
-                                                if region["polygon"].contains(Point((bbox_center[0], bbox_center[1]))):
-                                                    region["counts"] += 1
-
-                                    # Draw regions (Polygons/Rectangles)
-                                    for region in counting_regions:
-                                        region_label = str(region["counts"])
-                                        region_color = region["region_color"]
-                                        region_text_color = region["text_color"]
-
-                                        polygon_coords = np.array(region["polygon"].exterior.coords, dtype=np.int32)
-                                        centroid_x, centroid_y = int(region["polygon"].centroid.x), int(
-                                            region["polygon"].centroid.y)
-
-
-                                        text_size, _ = cv2.getTextSize(
-                                            "Counter: " + region_label, cv2.FONT_HERSHEY_SIMPLEX, fontScale=font_scale, thickness=line_thickness
-                                        )
-                                        text_x = centroid_x - text_size[0] // 2
-                                        text_y = text_size[1]
-                                        cv2.rectangle(
-                                            frame,
-                                            (text_x, text_y - text_size[1]),
-                                            (text_x + text_size[0], text_y),
-                                            region_color,
-                                            -1,
-                                        )
-                                        cv2.putText(
-                                            frame, "Counter: " + region_label, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale,
-                                            region_text_color, line_thickness
-                                        )
-
-                                    video_writer.write(frame)
-
-                                    for region in counting_regions:  # Reinitialize count for each region
-                                        region["counts"] = 0
-
-                                    if cv2.waitKey(1) & 0xFF == ord("q"):
-                                        break
-                                del vid_frame_count
                                 video_writer.release()
                                 cap.release()
                                 cv2.destroyAllWindows()
 
+                                new_video_name = video_name[:-4] + '.mp4'
                                 new_video_path = video_path[:-4] + '.mp4'
-                                self.convert_avi_to_mp4(video_path, new_video_path)
-                                result_path = Path(f"{settings.MEDIA_URL}Result/{video_name[:-4] + '.mp4'}")
+                                convert_avi_to_mp4(video_path, new_video_path)
+                                result_path = Path(f"{settings.MEDIA_URL}Result/{new_video_name}")
 
-                                print("Video path:", result_path)
+                                # print("Video path:", result_path)
 
                             with open(Path(f'{settings.MEDIA_ROOT}/Result/Result.txt'), 'a') as f:
                                 f.write(str(result_path))
@@ -308,8 +194,6 @@ class MediaPage(Page):
             context = self.reset_context(request)
             return render(request, "cam_app2/image.html", context)
 
-    def annotate_img(self, img, result):
-        pass
 
     def add_results_to_context(self, results_path, context):
         contents = os.listdir(results_path)
@@ -323,7 +207,7 @@ class MediaPage(Page):
                     if result.split('.')[-1] == 'avi':
                         result = result[:-4] + '.mp4'
                         new_result_path = os.path.join(item_path, result)
-                        self.convert_avi_to_mp4(result_path, new_result_path)
+                        convert_avi_to_mp4(result_path, new_result_path)
                         result_path = new_result_path
                     shutil.move(result_path, os.path.join(results_path, result))
                     filename = Path(f"{settings.MEDIA_URL}Result/{result}")
@@ -334,7 +218,75 @@ class MediaPage(Page):
                 shutil.rmtree(item_path)
         return context
 
-    def convert_avi_to_mp4(self, avi_file_path, output_name):
-        clip = moviepy.VideoFileClip(avi_file_path)
-        clip.write_videofile(output_name)
-        return True
+def annotate_img(img, results, scale=0.03, text_weight=2):
+    color_palette = [
+        (255, 165, 0),
+        (255, 255, 0),
+        (255, 0, 0),
+        (255, 0, 255),
+        (0, 0, 255),
+        (0, 255, 255),
+        (0, 255, 0),
+    ]
+
+    h, w, channels = img.shape
+    font_scale = w / (25 / scale)
+    annotator = Annotator(img)
+    for r in results:
+        boxes = r.boxes
+        total = len(boxes.cls.cpu().tolist())
+        names = yolov8m_model.names
+        class_list = boxes.cls.cpu().tolist()
+        class_counts = [class_list.count(i) for i in range(len(names))]
+        for box in boxes:
+            b = box.xyxy[0]
+            c = box.cls
+            annotator.box_label(b, yolov8m_model.names[int(c)],
+                                color=color_palette[int(c)],
+                                txt_color=(0, 0, 0))
+        total_text = f'Total: {total}'
+        total_text_size, _ = cv2.getTextSize(
+            total_text, cv2.FONT_HERSHEY_SIMPLEX, fontScale=font_scale, thickness=text_weight
+        )
+        total_text_x = w // 2 - total_text_size[0] // 2
+        total_text_y = total_text_size[1] + 10
+        padding = 10
+        cv2.rectangle(
+            img,
+            (total_text_x - padding, total_text_y - total_text_size[1] - padding),
+            (total_text_x + total_text_size[0] + padding, total_text_y + padding * 2),
+            (37, 255, 225),
+            -1,
+        )
+        cv2.putText(
+            img, total_text, (total_text_x, total_text_y),
+            cv2.FONT_HERSHEY_SIMPLEX, font_scale,
+            (0, 0, 0), text_weight * 2
+        )
+
+        class_counts_text = ", ".join([names[i] + ": " + str(class_counts[i]) for i in range(len(class_counts))])
+        class_counts_text_size, _ = cv2.getTextSize(
+            class_counts_text, cv2.FONT_HERSHEY_SIMPLEX, fontScale=font_scale, thickness=text_weight
+        )
+
+        class_counts_text_x = w // 2 - class_counts_text_size[0] // 2
+        class_counts_text_y = class_counts_text_size[1] + total_text_y + padding * 2
+        cv2.rectangle(
+            img,
+            (class_counts_text_x - padding, class_counts_text_y - class_counts_text_size[1] - padding),
+            (class_counts_text_x + class_counts_text_size[0] + padding, class_counts_text_y + padding * 2),
+            (37, 255, 225),
+            -1,
+        )
+        cv2.putText(
+            img, class_counts_text, (class_counts_text_x, class_counts_text_y),
+            cv2.FONT_HERSHEY_SIMPLEX, font_scale,
+            (0, 0, 0), text_weight
+        )
+        return img
+
+
+def convert_avi_to_mp4(avi_file_path, output_name):
+    clip = moviepy.VideoFileClip(avi_file_path)
+    clip.write_videofile(output_name)
+    return True

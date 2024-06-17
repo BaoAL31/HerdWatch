@@ -11,12 +11,15 @@ import os, json, cv2, random, glob, uuid
 import matplotlib.pyplot as plt
 from ultralytics import YOLO
 from ultralytics.utils.plotting import Annotator
+import torch
 
 from pathlib import Path
 import time
 
 weights_dir = settings.YOLOV8_WEIGTHS_DIR
 yolov8m_model = YOLO(os.path.join(weights_dir, "final_model.pt"))
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+yolov8m_model.to(device)
 
 class VideoCamera(object):
     def __init__(self):
