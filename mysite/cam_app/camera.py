@@ -32,51 +32,79 @@ class VideoCamera(object):
         self.video.release()
 
     def get_frame_with_detection(self):
-        color_palete = [
-            (255, 165, 0),
-            (255, 255, 0),
-            (255, 0, 0),
-            (255, 0, 255),
-            (0, 0, 255),
-            (0, 255, 255),
-            (0, 255, 0),
-        ]
-        success, image = self.video.read()
-        # We are using Motion JPEG, but OpenCV defaults to capture raw images,
-        # so we must encode it into JPEG in order to correctly display the
-        # video stream.
-        outputs = image
-        h, w, channels = outputs.shape
-        outputImage = yolov8m_model(image, save=False, conf=0.15, iou=0.6)
-        annotator = Annotator(outputs)
-        for r in outputImage:
-            boxes = r.boxes
-            count = len(boxes.cls.cpu().tolist())
-            for box in boxes:
-                b = box.xyxy[0]  # get box coordinates in (left, top, right, bottom) format
-                c = box.cls
-                annotator.box_label(b, yolov8m_model.names[int(c)], color=color_palete[int(c)])
+        success, img = self.video.read()
+        results = yolov8m_model(img, save=False, conf=0.2)
+        annotated_img = annotate_img(img, results, scale=0.025, text_weight=1)
+        annotated_img = np.asarray(annotated_img)
+        ret, annotated_img = cv2.imencode('.jpg', annotated_img) # check if it work
+        return annotated_img.tobytes(), annotated_img
 
-            text_size, _ = cv2.getTextSize(
-                str(count), cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, thickness=2
-            )
-            text_x = w // 2 - text_size[0] * 2 - 15
-            text_y = text_size[1]
-            cv2.rectangle(
-                outputs,
-                (text_x - 5, text_y - text_size[1] - 5),
-                (text_x + text_size[0] + 100, text_y + 5),
-                (37, 255, 225),
-                -1,
-            )
-            cv2.putText(
-                outputs, "Counter: " + str(count), (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
-                (0, 0, 0), 2
-            )
+def annotate_img(img, results, scale=0.03, text_weight=2):
+    color_palette = [
+        (255, 165, 0),
+        (255, 255, 0),
+        (255, 0, 0),
+        (255, 0, 255),
+        (0, 0, 255),
+        (0, 255, 255),
+        (0, 255, 0),
+    ]
 
-        outputImagetoReturn = np.asarray(annotator.result())
-        ret, outputImagetoReturn = cv2.imencode('.jpg', outputImagetoReturn) # check if it work
-        return outputImagetoReturn.tobytes(), outputImage
+    h, w, channels = img.shape
+    font_scale = w / (25 / scale)
+    annotator = Annotator(img)
+    for r in results:
+        boxes = r.boxes
+        total = len(boxes.cls.cpu().tolist())
+        names = yolov8m_model.names
+        class_list = boxes.cls.cpu().tolist()
+        class_counts = [class_list.count(i) for i in range(len(names))]
+        for box in boxes:
+            b = box.xyxy[0]
+            c = box.cls
+            annotator.box_label(b, yolov8m_model.names[int(c)],
+                                color=color_palette[int(c)],
+                                txt_color=(0, 0, 0))
+        total_text = f'Total: {total}'
+        total_text_size, _ = cv2.getTextSize(
+            total_text, cv2.FONT_HERSHEY_SIMPLEX, fontScale=font_scale, thickness=text_weight
+        )
+        padding = 5
+        total_text_x = w // 2 - total_text_size[0] // 2
+        total_text_y = total_text_size[1] + padding
+        cv2.rectangle(
+            img,
+            (total_text_x - padding, total_text_y - total_text_size[1] - padding),
+            (total_text_x + total_text_size[0] + padding, total_text_y + padding * 2),
+            (37, 255, 225),
+            -1,
+        )
+        cv2.putText(
+            img, total_text, (total_text_x, total_text_y),
+            cv2.FONT_HERSHEY_SIMPLEX, font_scale,
+            (0, 0, 0), text_weight * 2
+        )
+
+        class_counts_text = ", ".join([names[i] + ": " + str(class_counts[i]) for i in range(len(class_counts))])
+        class_counts_text_size, _ = cv2.getTextSize(
+            class_counts_text, cv2.FONT_HERSHEY_SIMPLEX, fontScale=font_scale, thickness=text_weight
+        )
+
+        class_counts_text_x = w // 2 - class_counts_text_size[0] // 2
+        class_counts_text_y = class_counts_text_size[1] + total_text_y + padding * 2
+        cv2.rectangle(
+            img,
+            (class_counts_text_x - padding, class_counts_text_y - class_counts_text_size[1] - padding),
+            (class_counts_text_x + class_counts_text_size[0] + padding, class_counts_text_y + padding * 2),
+            (37, 255, 225),
+            -1,
+        )
+        cv2.putText(
+            img, class_counts_text, (class_counts_text_x, class_counts_text_y),
+            cv2.FONT_HERSHEY_SIMPLEX, font_scale,
+            (0, 0, 0), text_weight
+        )
+        return img
 
 def generate_frames(camera):
     try:
